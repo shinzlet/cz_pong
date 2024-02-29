@@ -1,2 +1,1 @@
 mediapipe==0.9.3.0 # Finicky on Apple Silicon
-protobuf==3.20.3 # Required by Mediapipe
