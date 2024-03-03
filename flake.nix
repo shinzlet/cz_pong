@@ -17,17 +17,17 @@
         devShells.default = pkgs.mkShell {
           buildInputs = [ self.packages.${system}.python ];
           shellHook = ''
-            # # Create virtual environment if it doesn't exist
-            # if [ ! -d ".venv" ]; then
-            #   python -m venv .venv
-            # fi
+            # Create virtual environment if it doesn't exist
+            if [ ! -d ".venv" ]; then
+              python -m venv .venv
+            fi
 
-            # # Activate virtual environment
-            # source .venv/bin/activate
+            # Activate virtual environment
+            source .venv/bin/activate
 
-            # # Install requirements. This is idempotent, so we don't need to worry
-            # # about running it multiple times
-            # python -m pip install -r requirements.txt
+            # Install requirements. This is idempotent, so we don't need to worry
+            # about running it multiple times
+            python -m pip install -q -r requirements.txt
           '';
         };
       }
