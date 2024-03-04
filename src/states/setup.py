@@ -4,6 +4,7 @@ import sys
 from queue import Queue
 from .state import State
 from ..camera import get_working_ports
+from ..tracking_context import TrackingContext
 import pygame
 from pygame.surface import Surface
 from pygame.event import Event
@@ -13,46 +14,61 @@ import pygame_gui
 
 class Setup(State):
     CAMERA_LIST_REFRESH_PERIOD_MS = 10000
-
-    camera: VideoCapture | None
+    START_WAIT_PERIOD_MS = 2000
     camera_dropdown: pygame_gui.elements.UIDropDownMenu
     ui_manager: pygame_gui.UIManager
+    tracking: TrackingContext
+    hand_visibility_duration_ms: int
 
-    def __init__(self):
-        self.ms_since_cameras_scanned = 0 # This can exceed CAMERA_LIST_REFRESH_PERIOD_MS
+    def __init__(self, tracking: TrackingContext):
+        self.ms_since_cameras_scanned = self.CAMERA_LIST_REFRESH_PERIOD_MS - 1 # This can exceed CAMERA_LIST_REFRESH_PERIOD_MS
+                                                                               # Set to cause a refresh in the first frame for 
+                                                                               # less code duplication
         self.camera_ports = []
         self.camera_ports_queue = Queue()  # Thread-safe queue to hold the scanning results
-        self.update_camera_ports()  # Start the initial scan in a background thread
-        self.camera = None # Either None (no camera) or a cv2.VideoCapture of the target camera.
         self.ui_manager = pygame_gui.UIManager(pygame.display.get_window_size())
         self.camera_dropdown = Setup.make_camera_dropdown([], None, self.ui_manager)
-
-    def update_camera_ports(self):
-        """
-        Starts the camera_scan_thread function in the background to avoid blocking.
-        """
-        thread = threading.Thread(target=self.camera_scan_thread)
-        thread.daemon = True
-        thread.start()
-
-    def camera_scan_thread(self):
-        """Work done to scan for cameras in the background thread. Blocking and slow."""
-        working_ports = get_working_ports()
-        self.camera_ports_queue.put(working_ports) # Communicate the results back
+        self.tracking = tracking
+        self.hand_visibility_duration_ms = 0 # If a hand is in view, how long it's been uninterruptedly shown.
 
     def draw(self, screen: Surface):
         screen.fill("purple")
 
         self.ui_manager.draw_ui(screen)
         
-        if self.camera:
-            frame_exists, frame = self.camera.read()
-            if frame_exists:
-                frame = pygame.image.frombuffer(frame.tobytes(), frame.shape[1::-1], "BGR")
-                frame = pygame.transform.scale(frame, (200, 100))
-                screen.blit(frame, (400, 400))
+        # Display the camera image if one is present
+        frame = self.tracking.frame
+        if frame is not None:
+            frame = pygame.image.frombuffer(frame.tobytes(), frame.shape[1::-1], "BGR")
+            frame = pygame.transform.scale(frame, (200, 100))
+            screen.blit(frame, (400, 400))
     
     def update(self, delta: int):
+        self.update_camera_list(delta)
+        self.sync_ui_to_camera_list()
+
+        # If the user's hands have been in frame for long enough, transition from setup to
+        # the main game:
+        if self.tracking.hand_seen_within(300):
+            self.hand_visibility_duration_ms += delta
+        else:
+            self.hand_visibility_duration_ms = 0
+        
+        if self.hand_visibility_duration_ms > self.START_WAIT_PERIOD_MS:
+            print("Starting game")
+
+        self.ui_manager.update(delta / 1000)
+    
+    def camera_scan_thread(self):
+        """Work done to scan for cameras in the background thread. Blocking and slow."""
+        working_ports = get_working_ports()
+        self.camera_ports_queue.put(working_ports) # Communicate the results back
+
+    def update_camera_list(self, delta: int):
+        """
+        Track the time since the available camera ports were last enumerated and dispatch a background
+        task to update the list if needed.
+        """
         # We only attempt to refresh the camera list in the gametick that straddles the refresh period.
         # This is very important, because the camera refresh happens in the background - failing
         # to debounce would produce many refresh threads.
@@ -61,10 +77,14 @@ class Setup(State):
 
         # Refresh the camera list if needed
         if should_refresh_cameras:
-            self.update_camera_ports()
+            # Starts the camera_scan_thread function in the background to avoid blocking.
+            thread = threading.Thread(target=self.camera_scan_thread)
+            thread.daemon = True
+            thread.start()
         
         self.ms_since_cameras_scanned += delta
-        
+    
+    def sync_ui_to_camera_list(self):
         # Update camera_ports if the background thread has finished scanning
         if not self.camera_ports_queue.empty():
             self.camera_ports = self.camera_ports_queue.get()
@@ -91,8 +111,6 @@ class Setup(State):
             new_selection = self.get_selected_port()
             if old_selection != new_selection:
                 self.set_camera(new_selection)
-        
-        self.ui_manager.update(delta / 1000)
 
     def handle_event(self, event: Event):
         # Give the ui manager a chance to consume this event
@@ -107,9 +125,9 @@ class Setup(State):
     
     def set_camera(self, port: int | None):
         if port is not None:
-            self.camera = VideoCapture(port)
+            self.tracking.camera = VideoCapture(port)
         else:
-            self.camera = None
+            self.tracking.camera = None
     
     def get_selected_port(self) -> int | None:
         selection = self.camera_dropdown.selected_option

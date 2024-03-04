@@ -20,8 +20,6 @@ HAND_LANDMARKER_PATH = os.path.join(PROJECT_ROOT, "models/hand_landmarker.task")
 
 ready = True
 def print_result(result: HandLandmarkerResult, output_image: mp.Image, timestamp_ms: int):
-    global ready
-    ready = True
     hand_count = len(result.handedness)
     if  hand_count == 0:
         print("No Hand")
