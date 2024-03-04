@@ -48,7 +48,7 @@ class Setup(State):
         if self.camera:
             frame_exists, frame = self.camera.read()
             if frame_exists:
-                frame = pygame.image.frombuffer(frame.tobytes(), frame.shape[1::-1], "RGB")
+                frame = pygame.image.frombuffer(frame.tobytes(), frame.shape[1::-1], "BGR")
                 frame = pygame.transform.scale(frame, (200, 100))
                 screen.blit(frame, (400, 400))
     
