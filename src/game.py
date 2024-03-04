@@ -1,6 +1,7 @@
 import pygame
 from .states.setup import Setup
 from .tracking_context import TrackingContext
+from .events import *
 import mediapipe as mp
 
 # from enum import Enum
@@ -44,6 +45,8 @@ class Game:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
+                elif event.type == START_PONG:
+                    print("Start pong!")
                 else:
                     self.state.handle_event(event)
 

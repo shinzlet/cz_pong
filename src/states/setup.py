@@ -5,6 +5,7 @@ from queue import Queue
 from .state import State
 from ..camera import get_working_ports
 from ..tracking_context import TrackingContext
+from ..events import START_PONG
 import pygame
 from pygame.surface import Surface
 from pygame.event import Event
@@ -55,7 +56,7 @@ class Setup(State):
             self.hand_visibility_duration_ms = 0
         
         if self.hand_visibility_duration_ms > self.START_WAIT_PERIOD_MS:
-            print("Starting game")
+            pygame.event.post(pygame.event.Event(START_PONG))
 
         self.ui_manager.update(delta / 1000)
     
