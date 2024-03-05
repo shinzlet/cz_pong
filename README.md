@@ -61,4 +61,5 @@ TODO
 TODO
 
 ## Contributors
-- Seth Hinz ([sethhinz@me.com](mailto:sethhinz@me.com))
+- Code by Seth Hinz ([sethhinz@me.com](mailto:sethhinz@me.com))
+- Music by [FASSounds](https://pixabay.com/users/fassounds-3433550/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=112191) from [Pixabay](https://pixabay.com//?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=112191)
