@@ -49,6 +49,7 @@ class Game:
             # Cross-fade the music out and back in for good looping
             pygame.mixer.music.fadeout(self.SONG_FADE_MS)
             pygame.mixer.music.play(0, start=self.SONG_REPEAT_START_S, fade_ms=self.SONG_FADE_MS)
+            pygame.mixer.music.set_volume(0.3)
             pygame.mixer.music.set_volume(1)  # Ensure volume is reset after fade
 
     def start(self):
