@@ -1,7 +1,7 @@
 # CZ Pong
 A relaxing, colorful pong game controlled by your webcam's view of your hand. The paddle moves up and down as your hand does in the image frame!
 
-![Gameplay demonstration, showing a hand controlling the paddle](https://s9.gifyu.com/images/SUzCG.gif)
+![Gameplay demonstration, showing a hand controlling the paddle](https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWIxNGJzb3NmcjdvcGJ0dHN5YzVuZjRzd2F4eWtsaXBqeW9zYXZ1ciZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/s3isdWKwZt7lIHuSGB/giphy.gif)
 
 ## Table of Contents
 - [Running the Game](#running-the-game)
@@ -9,7 +9,7 @@ A relaxing, colorful pong game controlled by your webcam's view of your hand. Th
   - [Manually (⚠️ Without venv)](#manually-️-without-venv)
   - [With Nix](#with-nix)
 - [FAQ](#faq)
-- [Debugging](#debugging)
+- [Architecture](#architecture)
 - [Contributors & Attribution](#contributors--attribution)
 
 ## Running the Game
@@ -59,10 +59,19 @@ Using Nix is not necessary, but it ensures that you will not have any issues due
 or conflicting library installations. This approach will also automatically manage the venv for you.
 
 ## FAQ
-TODO
+- Why is my paddle not moving?
+    - Make sure you only have one hand in frame - the wrong hand may be getting chosen as an input. In a more robust game, there would be an option to choose a dominant hand, but this is just a demo.
 
-## Debugging
-TODO
+## Architecture
+A rough architectural overview is given here, but the code is the primary source of truth.
+The entry point of the program is `main.py` - this is used to get the path of the root folder and spawn a game instance.
+`src/game.py` contains the core gameloop and manages state. The different game states (i.e. the setup menu and the pong
+game) are concrete implementations of the abstract `State` type, which exposes a `draw`, `update`, and `handle_event` method.
+When a state is active, `Game` will call those methods on it in the game loop. This allows the different levels and the core
+game engine to all be strongly decoupled.
+
+States that require access to hand tracking data can request a reference to the global `TrackingContext` in their constructor.
+Event passing to the game loop is done using pygame's event system (custom events are registered in `src/events.py`).
 
 ## Contributors & Attribution
 - Code by Seth Hinz ([sethhinz@me.com](mailto:sethhinz@me.com))
