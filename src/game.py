@@ -3,6 +3,7 @@ from .states import setup, pong
 from .tracking_context import TrackingContext
 from .events import *
 import mediapipe as mp
+from os import path
 
 class Game:
     tracking: TrackingContext
@@ -19,11 +20,13 @@ class Game:
         self.state = None
         self.tracking = TrackingContext(self.root_dir, None)
         self.song_playing = False  # Track if the song is already playing
+        self.font = pygame.freetype.Font(path.join(self.root_dir, "assets/MadimiOne-Regular.ttf"), 24)
 
     def play_music(self):
         if not self.song_playing:
             pygame.mixer.music.load(f'{self.root_dir}/{self.SONG_PATH}')
             pygame.mixer.music.play(0)  # Loop indefinitely
+            pygame.mixer.music.set_volume(0.3)
             self.song_playing = True
 
     def update_music(self):
@@ -50,7 +53,7 @@ class Game:
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == START_PONG:
-                    self.state = pong.Pong(self.tracking)
+                    self.state = pong.Pong(self.root_dir, self.font, self.tracking)
                     self.play_music()  # Start playing the music when entering PONG state
                 else:
                     self.state.handle_event(event)

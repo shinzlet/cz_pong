@@ -3,7 +3,9 @@ from ..tracking_context import TrackingContext
 from pygame import Surface, Event
 import hsluv
 import pygame
+from typing import Tuple
 
+from os import path
 import numpy as np
 from mediapipe import solutions
 from mediapipe.python.solutions.hands import HandLandmark
@@ -16,20 +18,24 @@ class Pong(State):
     BG_ACCENT_RADIUS = 20
     BG_ACCENT_SWAY = 15
     BALL_MIN_SPEED = 150
-    BALL_MAX_SPEED = 300
-    ACCELERATION_TIMESCALE = 5 # The number of hits used as a time constant in the speed vs hits exponential.
+    BALL_MAX_SPEED = 1000
+    ACCELERATION_TIMESCALE = 10 # The number of hits used as a time constant in the speed vs hits exponential.
     BG_MARGIN = 30
     
     tracking: TrackingContext
     background_hue: float
 
-    def __init__(self, tracking: TrackingContext):
+    def __init__(self, root_dir: str, font: pygame.Font, tracking: TrackingContext):
         self.tracking = tracking
-        self.ball = Ball(300, 200, 10, self.BALL_MIN_SPEED, -np.pi * 0.75, "white")
+        self.ball = Ball(300, 200, 10, self.BALL_MIN_SPEED, -np.pi * 0.8, "white")
         self.paddle_y = pygame.display.get_surface().get_height() / 2
         self.background_hue = 0
         self.score = 0
         self.background_phase = 0
+        self.hit_sound = pygame.mixer.Sound(path.join(root_dir, 'assets/flap.wav'))
+        self.bounce_sound = pygame.mixer.Sound(path.join(root_dir, 'assets/knock.mp3'))
+        self.bounce_sound.set_volume(0.8)
+        self.font = font
 
     def draw(self, screen: Surface):
         normalized_ball_speed = (self.ball.speed - self.BALL_MIN_SPEED) / (self.BALL_MAX_SPEED - self.BALL_MIN_SPEED)
@@ -37,6 +43,9 @@ class Pong(State):
         screen.fill(np.array(hsluv.hsluv_to_rgb((self.background_hue, 100, bg_luminosity))) * 255)
         
         self.draw_background(screen)
+
+        text_surface, text_rect = self.font.render(f"{self.score} hits", "white")
+        screen.blit(text_surface, (self.BG_MARGIN, screen.get_height() - self.BG_MARGIN - text_rect.height))
 
         self.ball.draw(screen)
 
@@ -55,12 +64,16 @@ class Pong(State):
             self.paddle_rect())
 
     def update(self, delta: int):
-        hit_paddle = self.ball.update(delta, self.arena_rect(), self.paddle_rect())
+        hit_paddle, hit_walls = self.ball.update(delta, self.arena_rect(), self.paddle_rect())
 
         if hit_paddle:
             self.score += 1
             speed_range = self.BALL_MAX_SPEED - self.BALL_MIN_SPEED
             self.ball.speed = self.BALL_MIN_SPEED + speed_range * (1 - np.exp(-self.score / self.ACCELERATION_TIMESCALE))
+            self.hit_sound.play()
+        
+        if hit_walls:
+            self.bounce_sound.play()
         
         self.background_hue += delta / 100
         self.background_hue %= 360
@@ -181,12 +194,13 @@ class Ball:
     def draw(self, screen):
         pygame.draw.circle(screen, self.color, (self.x, self.y), self.radius)
 
-    def update(self, delta_ms, screen_rect, paddle_rect) -> bool:
+    def update(self, delta_ms, screen_rect, paddle_rect) -> Tuple[bool, bool]:
         # Calculate new position based on speed, direction, and delta time
         movement = self.direction * self.speed * delta_ms / 1000.0
         self.x += movement[0]
         self.y += movement[1]
         hit_paddle = False
+        hit_wall = False
 
         # Create a rect for the ball to use for collision detection
         ball_rect = pygame.Rect(self.x - self.radius, self.y - self.radius, self.radius * 2, self.radius * 2)
@@ -207,14 +221,17 @@ class Ball:
         if ball_rect.top <= screen_rect.top:
             self.direction[1] *= -1
             self.y = screen_rect.top + self.radius + 1
+            hit_wall = True
         
         if ball_rect.bottom >= screen_rect.bottom:
             self.direction[1] *= -1
             self.y = screen_rect.bottom - self.radius - 1
+            hit_wall = True
 
         # Bounce off the left (or right, if you want to change it, invert the logic here)
         if ball_rect.left <= screen_rect.left:  # Change to `ball_rect.right >= screen_rect.right` for right-side bounce
             self.direction[0] *= -1
             self.x = screen_rect.left + self.radius + 1
+            hit_wall = True
 
-        return hit_paddle
+        return (hit_paddle, hit_wall)

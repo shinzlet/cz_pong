@@ -60,6 +60,8 @@ TODO
 ## Debugging
 TODO
 
-## Contributors
+## Contributors & Attribution
 - Code by Seth Hinz ([sethhinz@me.com](mailto:sethhinz@me.com))
 - Music by [FASSounds](https://pixabay.com/users/fassounds-3433550/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=112191) from [Pixabay](https://pixabay.com//?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=112191)
+- `flap.wav` by [ani_music on freesound.org](https://freesound.org/people/ani_music/sounds/244982/)
+- `knock.mp3` by [AUDACITIER on freesound.org](https://freesound.org/people/AUDACITIER/sounds/625687/)
