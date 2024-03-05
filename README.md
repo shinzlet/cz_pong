@@ -14,6 +14,9 @@ A relaxing, colorful pong game controlled by your webcam's view of your hand. Th
 
 ## Running the Game
 Running the game just requires having the correct libraries and a supported python version installed. I recommend using a venv to keep your development environments isolated, but you can also install these dependencies globally.
+
+Python 3.10.* and 3.11.* should all work on all platforms. There is currently no working mediapipe version for apple silicon Macs that supports python 3.12.*, but on windows and linux I expect (but have not been able to verify) that 3.12.2 should work fine. I highly reccommend using python 3.10 or 3.11.
+
 ### Manually (Using venv)
 Enter a shell in the project root folder. If you do not have pip installed as a standalone command, replace `pip` with
 `python -m pip` in these instructions.
