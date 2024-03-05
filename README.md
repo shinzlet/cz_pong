@@ -1,6 +1,8 @@
 # CZ Pong
 A relaxing, colorful pong game controlled by your webcam's view of your hand. The paddle moves up and down as your hand does in the image frame!
 
+[Video Overview](https://youtu.be/0dQjbVo9-rU)
+
 ![Gameplay demonstration, showing a hand controlling the paddle](https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWIxNGJzb3NmcjdvcGJ0dHN5YzVuZjRzd2F4eWtsaXBqeW9zYXZ1ciZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/s3isdWKwZt7lIHuSGB/giphy.gif)
 
 ## Table of Contents
