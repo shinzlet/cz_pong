@@ -3,6 +3,7 @@ import numpy as np
 import pygame
 from os import path
 from pygame import Surface, Event
+from pygame.freetype import Font
 from mediapipe.python.solutions.hands import HandLandmark
 from .state import State
 from ..events import FIRST_HIT, GAME_OVER
@@ -11,7 +12,7 @@ from ..ball import Ball
 
 class Pong(State):
     # Note: All geometric units are listed in pixels.
-    
+
     PADDLE_WIDTH = 20
     PADDLE_HEIGHT = 100
 
@@ -49,9 +50,9 @@ class Pong(State):
 
     hit_sound: pygame.mixer.Sound
     bounce_sound: pygame.mixer.Sound
-    font: pygame.Font
+    font: Font
 
-    def __init__(self, root_dir: str, font: pygame.Font, tracking: TrackingContext):
+    def __init__(self, root_dir: str, font: Font, tracking: TrackingContext):
         self.tracking = tracking
         self.ball = Ball(300, 200, 10, self.BALL_MIN_SPEED, -np.pi * 0.8, "white")
         self.paddle_y = pygame.display.get_surface().get_height() / 2

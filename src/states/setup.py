@@ -4,6 +4,7 @@ from queue import Queue
 import pygame
 from pygame.surface import Surface
 from pygame.event import Event
+from pygame.font import Font
 import pygame_gui
 from cv2 import VideoCapture
 import numpy as np
@@ -40,9 +41,9 @@ class Setup(State):
     # If a hand is in view, how long it's been uninterruptedly shown. Otherwise 0.
     hand_visibility_duration_ms: int
 
-    font: pygame.Font
+    font: Font
 
-    def __init__(self, font: pygame.font.Font, tracking: TrackingContext):
+    def __init__(self, font: Font, tracking: TrackingContext):
         # Set to cause a refresh in the first frame for less code duplication
         self.ms_since_cameras_scanned = self.CAMERA_LIST_REFRESH_PERIOD_MS - 1
         self.camera_ports = []

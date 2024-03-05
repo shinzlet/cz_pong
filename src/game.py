@@ -1,5 +1,6 @@
 from os import path
 import pygame
+from pygame.freetype import Font
 import mediapipe as mp
 from .states import state as abstract_state, setup, pong
 from .events import *
@@ -18,7 +19,7 @@ class Game:
     state: abstract_state.State
     tracking: TrackingContext
     song_playing: bool
-    font: pygame.freetype.Font
+    font: Font
 
     def __init__(self, root_dir: str) -> None:
         pygame.init()
@@ -27,7 +28,7 @@ class Game:
         self.state = None
         self.tracking = TrackingContext(self.root_dir, None)
         self.song_playing = False  # Track if the song is already playing
-        self.font = pygame.freetype.Font(path.join(self.root_dir, "assets/MadimiOne-Regular.ttf"), 24)
+        self.font = Font(path.join(self.root_dir, "assets/MadimiOne-Regular.ttf"), 24)
 
     def play_music(self):
         """
