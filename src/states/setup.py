@@ -1,4 +1,5 @@
 import threading
+from typing import List
 from queue import Queue
 import pygame
 from pygame.surface import Surface
@@ -14,25 +15,42 @@ from ..events import START_PONG
 
 class Setup(State):
     CAMERA_LIST_REFRESH_PERIOD_MS = 10000
+
+    # How long the player's hand must be in frame for the pong game to start.
     START_WAIT_PERIOD_MS = 5000
+
+    # How close UI elements can get to the window border (px)
     MARGIN = 50
+
+    # The spacing between adjacent UI elements (px)
     GAP = 10
 
-    camera_dropdown: pygame_gui.elements.UIDropDownMenu
+    # How long since the available cameras were polled. Note: this can exceed CAMERA_LIST_REFRESH_PERIOD_MS!
+    ms_since_cameras_scanned: int
+
+    # A list containing working camera ports that opencv can make a VideoCapture object from.
+    camera_ports: List[int]
+
+    # A thread-safe queue used to send `camera_ports` from the polling thread to the ui thread.
+    camera_ports_queue: Queue
     ui_manager: pygame_gui.UIManager
+    camera_dropdown: pygame_gui.elements.UIDropDownMenu
     tracking: TrackingContext
+
+    # If a hand is in view, how long it's been uninterruptedly shown. Otherwise 0.
     hand_visibility_duration_ms: int
 
+    font: pygame.Font
+
     def __init__(self, font: pygame.font.Font, tracking: TrackingContext):
-        self.ms_since_cameras_scanned = self.CAMERA_LIST_REFRESH_PERIOD_MS - 1 # This can exceed CAMERA_LIST_REFRESH_PERIOD_MS
-                                                                               # Set to cause a refresh in the first frame for 
-                                                                               # less code duplication
+        # Set to cause a refresh in the first frame for less code duplication
+        self.ms_since_cameras_scanned = self.CAMERA_LIST_REFRESH_PERIOD_MS - 1
         self.camera_ports = []
-        self.camera_ports_queue = Queue()  # Thread-safe queue to hold the scanning results
+        self.camera_ports_queue = Queue()
         self.ui_manager = pygame_gui.UIManager(pygame.display.get_window_size())
         self.camera_dropdown = Setup.make_camera_dropdown([], None, self.ui_manager)
         self.tracking = tracking
-        self.hand_visibility_duration_ms = 0 # If a hand is in view, how long it's been uninterruptedly shown.
+        self.hand_visibility_duration_ms = 0
         self.font = font
 
     def draw(self, screen: Surface):
@@ -48,6 +66,10 @@ class Setup(State):
 
         screen.fill(hsluv.hsluv_to_hex((hue, np.clip(saturation, 0, 100), luminosity)))
 
+        # Renders the text and dropdown menu to the screen.
+        # This layout code is a bit messy, but our UI needs are so simple that this is an easier approach
+        # than fully digging into pygame_gui. For a more serious project, location anchors could be
+        # used to automate relative positioning.
         x = self.MARGIN
         y = self.MARGIN
         text_surface, text_rect = self.font.render("Select a Camera", "white")
@@ -70,10 +92,13 @@ class Setup(State):
         text_surface, text_rect = self.font.render(start_message, "white")
         screen.blit(text_surface, (x, screen.get_height() - self.MARGIN - text_rect.height))
 
+        # Draw the camera preview in the remaining unused space on the screen.
         min_x = self.camera_dropdown.get_abs_rect().right
+        self.draw_camera_preview(screen, min_x)
 
         self.ui_manager.draw_ui(screen)
 
+    def draw_camera_preview(self, screen, min_x: int) -> None:
         frame = self.tracking.get_annotated_frame()
         if frame is not None:
             frame_surface = pygame.image.frombuffer(frame.tobytes(), frame.shape[1::-1], "BGR")
@@ -98,7 +123,6 @@ class Setup(State):
             # Calculate y position to vertically center the image
             y_position = (screen.get_height() - new_height) // 2
 
-            # Blit the scaled image to the screen at the calculated position
             screen.blit(frame, (min_x + self.MARGIN, int(y_position)))
 
     
@@ -183,12 +207,17 @@ class Setup(State):
                 return
     
     def set_camera(self, port: int | None):
+        """
+        Creates a VideoCapture object and configures the TrackingContext to use it, if the port exists.
+        If the port is not provided, nothing happens.
+        """
         if port is not None:
             self.tracking.camera = VideoCapture(port)
         else:
             self.tracking.camera = None
     
     def get_selected_port(self) -> int | None:
+        """Returns the integer value of the camera port selected in the dropdown. If there is no selection, returns None."""
         selection = self.camera_dropdown.selected_option
         if selection == "No Cameras Found":
             return None

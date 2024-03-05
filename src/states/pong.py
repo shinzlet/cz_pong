@@ -10,6 +10,8 @@ from ..tracking_context import TrackingContext
 from ..ball import Ball
 
 class Pong(State):
+    # Note: All geometric units are listed in pixels.
+    
     PADDLE_WIDTH = 20
     PADDLE_HEIGHT = 100
 
