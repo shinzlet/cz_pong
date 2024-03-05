@@ -1,5 +1,5 @@
 import pygame
-from .states import setup, pong
+from .states import state as abstract_state, setup, pong
 from .tracking_context import TrackingContext
 from .events import *
 import mediapipe as mp
@@ -14,6 +14,12 @@ class Game:
     SONG_REPEAT_START_S = 6 # Where the song should restart after it reaches the end (in seconds)
     SONG_FADE_MS = 1500
 
+    root_dir: str
+    state: abstract_state.State
+    tracking: TrackingContext
+    song_playing: bool
+    font: pygame.freetype.Font
+
     def __init__(self, root_dir: str) -> None:
         pygame.init()
         pygame.display.set_caption("seth hinz 4 instrumentation engineer")
@@ -24,6 +30,9 @@ class Game:
         self.font = pygame.freetype.Font(path.join(self.root_dir, "assets/MadimiOne-Regular.ttf"), 24)
 
     def play_music(self):
+        """
+        Begins the game music, if it is not already playing. Idempotent.
+        """
         if not self.song_playing:
             pygame.mixer.music.load(f'{self.root_dir}/{self.SONG_PATH}')
             pygame.mixer.music.play(0)  # Loop indefinitely
@@ -31,6 +40,9 @@ class Game:
             self.song_playing = True
 
     def update_music(self):
+        """
+        Ensures the music loops seamlessly. Should be called every frame.
+        """
         # Check the current playback position
         current_pos = pygame.mixer.music.get_pos() / 1000.0  # Convert milliseconds to seconds
         if current_pos >= self.SONG_END_TIME_S:
@@ -62,7 +74,7 @@ class Game:
                 else:
                     self.state.handle_event(event)
 
-            self.update_music()  # Update music playback state
+            self.update_music()
 
             self.state.draw(screen)
 
