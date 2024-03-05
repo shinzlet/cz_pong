@@ -1,6 +1,4 @@
 import threading
-import os
-import sys
 from queue import Queue
 from .state import State
 from ..camera import get_working_ports
@@ -11,17 +9,21 @@ from pygame.surface import Surface
 from pygame.event import Event
 from cv2 import VideoCapture
 import pygame_gui
-
+import numpy as np
+import hsluv
 
 class Setup(State):
     CAMERA_LIST_REFRESH_PERIOD_MS = 10000
-    START_WAIT_PERIOD_MS = 2000
+    START_WAIT_PERIOD_MS = 5000
+    MARGIN = 50
+    GAP = 10
+
     camera_dropdown: pygame_gui.elements.UIDropDownMenu
     ui_manager: pygame_gui.UIManager
     tracking: TrackingContext
     hand_visibility_duration_ms: int
 
-    def __init__(self, tracking: TrackingContext):
+    def __init__(self, font: pygame.font.Font, tracking: TrackingContext):
         self.ms_since_cameras_scanned = self.CAMERA_LIST_REFRESH_PERIOD_MS - 1 # This can exceed CAMERA_LIST_REFRESH_PERIOD_MS
                                                                                # Set to cause a refresh in the first frame for 
                                                                                # less code duplication
@@ -31,18 +33,74 @@ class Setup(State):
         self.camera_dropdown = Setup.make_camera_dropdown([], None, self.ui_manager)
         self.tracking = tracking
         self.hand_visibility_duration_ms = 0 # If a hand is in view, how long it's been uninterruptedly shown.
+        self.font = font
 
     def draw(self, screen: Surface):
-        screen.fill("purple")
+        # The brightness of the setup screen "breathes" over time. It also becomes more saturated
+        # and brighter while the user's hands are in frame, eventually turning white before the game
+        # starts.
+        time_s = pygame.time.get_ticks() / 1000
+        start_proximity = self.hand_visibility_duration_ms / self.START_WAIT_PERIOD_MS
+        
+        hue = time_s * 20
+        saturation = 10 + 150 * start_proximity
+        luminosity = 10 + 10 * np.sin(time_s / 2) ** 8 + start_proximity * 80
+
+        screen.fill(hsluv.hsluv_to_hex((hue, np.clip(saturation, 0, 100), luminosity)))
+
+        x = self.MARGIN
+        y = self.MARGIN
+        text_surface, text_rect = self.font.render("Select a Camera", "white")
+        screen.blit(text_surface, (x, y))
+
+        y += self.GAP + text_rect.height
+        text_surface, text_rect = self.font.render("(this list refreshes automatically)", "white")
+        text_surface = pygame.transform.smoothscale_by(text_surface, 0.75)
+        screen.blit(text_surface, (x, y))
+
+        y += 4 * self.GAP
+        self.camera_dropdown.set_position((x, y))
+
+        if self.hand_visibility_duration_ms > 0:
+            time_left = (self.START_WAIT_PERIOD_MS - self.hand_visibility_duration_ms) / 1000
+            start_message = f"Hold for {time_left:.1f} seconds!"
+        else:
+            start_message = "Hold your hand in frame to start the game."
+        
+        text_surface, text_rect = self.font.render(start_message, "white")
+        screen.blit(text_surface, (x, screen.get_height() - self.MARGIN - text_rect.height))
+
+        min_x = self.camera_dropdown.get_abs_rect().right
 
         self.ui_manager.draw_ui(screen)
-        
-        # Display the camera image if one is present
-        frame = self.tracking.frame
+
+        frame = self.tracking.get_annotated_frame()
         if frame is not None:
-            frame = pygame.image.frombuffer(frame.tobytes(), frame.shape[1::-1], "BGR")
-            frame = pygame.transform.scale(frame, (200, 100))
-            screen.blit(frame, (400, 400))
+            frame_surface = pygame.image.frombuffer(frame.tobytes(), frame.shape[1::-1], "BGR")
+            frame_width, frame_height = frame.shape[1], frame.shape[0]
+            aspect_ratio = frame_width / frame_height
+
+            # Calculate available space considering minimum x and margin
+            available_width = screen.get_width() - 2 * self.MARGIN - min_x
+            available_height = screen.get_height() - 2 * self.MARGIN
+
+            # Scale image within available space while maintaining aspect ratio
+            if (available_width / aspect_ratio) <= available_height:
+                new_width = available_width
+                new_height = available_width / aspect_ratio
+            else:
+                new_width = available_height * aspect_ratio
+                new_height = available_height
+
+            # Scale the frame to the new dimensions
+            frame = pygame.transform.scale(frame_surface, (int(new_width), int(new_height)))
+
+            # Calculate y position to vertically center the image
+            y_position = (screen.get_height() - new_height) // 2
+
+            # Blit the scaled image to the screen at the calculated position
+            screen.blit(frame, (min_x + self.MARGIN, int(y_position)))
+
     
     def update(self, delta: int):
         self.update_camera_list(delta)
@@ -154,5 +212,5 @@ class Setup(State):
         return pygame_gui.elements.UIDropDownMenu(
             options,
             selection,
-            pygame.Rect((200, 200), (100,50)),
+            pygame.Rect((50, 50), (250, 50)),
             ui_manager)

@@ -16,6 +16,7 @@ class Game:
 
     def __init__(self, root_dir: str) -> None:
         pygame.init()
+        pygame.display.set_caption("seth hinz 4 instrumentation engineer")
         self.root_dir = root_dir
         self.state = None
         self.tracking = TrackingContext(self.root_dir, None)
@@ -45,7 +46,7 @@ class Game:
         clock = pygame.time.Clock()
         running = True
 
-        self.state = setup.Setup(self.tracking)
+        self.state = setup.Setup(self.font, self.tracking)
 
         while running:
             # poll for events
@@ -54,7 +55,10 @@ class Game:
                     running = False
                 elif event.type == START_PONG:
                     self.state = pong.Pong(self.root_dir, self.font, self.tracking)
-                    self.play_music()  # Start playing the music when entering PONG state
+                elif event.type == FIRST_HIT:
+                    self.play_music() # For dramatic effect, there is no music until the player hits the ball
+                elif event.type == GAME_OVER:
+                    self.state = setup.Setup(self.font, self.tracking)
                 else:
                     self.state.handle_event(event)
 

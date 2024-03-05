@@ -6,6 +6,9 @@ import mediapipe as mp
 from mediapipe.tasks.python import BaseOptions
 from mediapipe.tasks.python.vision import HandLandmarker, HandLandmarkerResult, HandLandmarkerOptions, RunningMode
 from pygame import time
+import numpy as np
+from mediapipe import solutions
+from mediapipe.framework.formats import landmark_pb2
 
 class TrackingContext:
     camera: VideoCapture | None
@@ -38,6 +41,31 @@ class TrackingContext:
             else:
                 self.frame = None
                 self.hands = None
+    
+    def get_annotated_frame(self):
+        if self.frame is None or self.hands is None:
+            return None
+        
+        hand_landmarks_list = self.hands.hand_landmarks
+        annotated_image = np.copy(self.frame)
+
+        # Loop through the detected hands to visualize.
+        for idx in range(len(hand_landmarks_list)):
+            hand_landmarks = hand_landmarks_list[idx]
+
+            # Draw the hand landmarks.
+            hand_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
+            hand_landmarks_proto.landmark.extend([
+            landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in hand_landmarks
+            ])
+            solutions.drawing_utils.draw_landmarks(
+            annotated_image,
+            hand_landmarks_proto,
+            solutions.hands.HAND_CONNECTIONS,
+            solutions.drawing_styles.get_default_hand_landmarks_style(),
+            solutions.drawing_styles.get_default_hand_connections_style())
+
+        return annotated_image
     
     def hand_seen_within(self, period_ms: int):
         """

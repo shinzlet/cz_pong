@@ -1,4 +1,5 @@
 from .state import State
+from ..events import FIRST_HIT, GAME_OVER
 from ..tracking_context import TrackingContext
 from pygame import Surface, Event
 import hsluv
@@ -7,9 +8,7 @@ from typing import Tuple
 
 from os import path
 import numpy as np
-from mediapipe import solutions
 from mediapipe.python.solutions.hands import HandLandmark
-from mediapipe.framework.formats import landmark_pb2
 
 class Pong(State):
     PADDLE_WIDTH = 20
@@ -48,15 +47,6 @@ class Pong(State):
         screen.blit(text_surface, (self.BG_MARGIN, screen.get_height() - self.BG_MARGIN - text_rect.height))
 
         self.ball.draw(screen)
-
-        # Display the camera image if one is present
-        frame = self.tracking.frame
-        if frame is not None:
-            frame = self.draw_landmarks_on_image(frame, self.tracking.hands)
-            frame = pygame.image.frombuffer(frame.tobytes(), frame.shape[1::-1], "BGR")
-            frame = pygame.transform.scale(frame, (200, 100))
-            frame = pygame.transform.flip(frame, True, False)
-            screen.blit(frame, (400, 400))
         
         pygame.draw.rect(
             screen,
@@ -67,6 +57,9 @@ class Pong(State):
         hit_paddle, hit_walls = self.ball.update(delta, self.arena_rect(), self.paddle_rect())
 
         if hit_paddle:
+            if self.score == 0:
+                pygame.event.post(pygame.event.Event(FIRST_HIT))
+            
             self.score += 1
             speed_range = self.BALL_MAX_SPEED - self.BALL_MIN_SPEED
             self.ball.speed = self.BALL_MIN_SPEED + speed_range * (1 - np.exp(-self.score / self.ACCELERATION_TIMESCALE))
@@ -92,12 +85,16 @@ class Pong(State):
             y += landmarks[HandLandmark.PINKY_MCP].y
             y += landmarks[HandLandmark.INDEX_FINGER_MCP].y
             y /= 3
+            
             # y is normalized on [0, 1] - but detection is poor in the margins of the screen.
             # we clamp this to [0.2, 0.8] and then renormalize to ensure that the full control range
             # is reachable in the reliably detectable region of the view.
             y = np.clip(y, 0.2, 0.8)
             y = (y - 0.2) / 0.6
             self.paddle_y = y * (pygame.display.get_surface().get_height() - self.PADDLE_HEIGHT)
+        
+        if self.ball.x > pygame.display.get_surface().get_width() * 1.1:
+            pygame.event.post(pygame.event.Event(GAME_OVER))
 
     def handle_event(self, event: Event):
         pass
@@ -159,28 +156,6 @@ class Pong(State):
 
     def arena_rect(self) -> pygame.rect.Rect:
         return pygame.display.get_surface().get_rect()
-    
-    def draw_landmarks_on_image(self, rgb_image, detection_result):
-        hand_landmarks_list = detection_result.hand_landmarks
-        annotated_image = np.copy(rgb_image)
-
-        # Loop through the detected hands to visualize.
-        for idx in range(len(hand_landmarks_list)):
-            hand_landmarks = hand_landmarks_list[idx]
-
-            # Draw the hand landmarks.
-            hand_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
-            hand_landmarks_proto.landmark.extend([
-            landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in hand_landmarks
-            ])
-            solutions.drawing_utils.draw_landmarks(
-            annotated_image,
-            hand_landmarks_proto,
-            solutions.hands.HAND_CONNECTIONS,
-            solutions.drawing_styles.get_default_hand_landmarks_style(),
-            solutions.drawing_styles.get_default_hand_connections_style())
-
-        return annotated_image
 
 class Ball:
     def __init__(self, x, y, radius, speed, angle, color):
