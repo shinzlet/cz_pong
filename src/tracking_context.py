@@ -11,25 +11,40 @@ from mediapipe import solutions
 from mediapipe.framework.formats import landmark_pb2
 
 class TrackingContext:
+    """
+    Wraps a video input and hand detector with an easy to use API that automatically collects,
+    analyzes, and caches images and hand landmarks. This helps avoid redundant hand detection passes
+    in various places throughout the game.
+    """
+
     camera: VideoCapture | None
     hand_landmarker: HandLandmarker
-    hands: HandLandmarkerResult | None
-    hands_last_seen_ms: int | None
+    frame: np.ndarray | None
+    detection_result: HandLandmarkerResult | None
+    detection_result_last_seen_ms: int | None
 
     def __init__(self, root_dir: str, camera: VideoCapture | None = None):
         self.camera = camera
         self.hand_landmarker = TrackingContext.create_hand_detector(root_dir, self.hand_landmarker_callback)
         self.frame = None
-        self.hands = None
-        self.hands_last_seen_ms = None
+        self.detection_result = None
+        self.detection_result_last_seen_ms = None
     
-    def hand_landmarker_callback(self, result: HandLandmarkerResult, output_image: mp.Image, timestamp_ms: int):
-        self.hands = result
+    def hand_landmarker_callback(self, result: HandLandmarkerResult, output_image: mp.Image, timestamp_ms: int) -> None:
+        """
+        The callback that recieves hand landmarker results from mediapipe's `HandLandmarker.detect_async`. Caches the detection
+        result for later use.
+        """
+        self.detection_result = result
 
         if len(result.handedness) > 0:
-            self.hands_last_seen_ms = timestamp_ms
+            self.detection_result_last_seen_ms = timestamp_ms
     
-    def update(self, timestamp_ms: int):
+    def update(self, timestamp_ms: int) -> None:
+        """
+        Call this once each frame of the game in order to keep reading camera frames and detecting hands.
+        """
+
         if self.camera is not None and self.camera.isOpened():
             got_frame, frame = self.camera.read()
 
@@ -40,16 +55,20 @@ class TrackingContext:
                     timestamp_ms)
             else:
                 self.frame = None
-                self.hands = None
+                self.detection_result = None
     
-    def get_annotated_frame(self):
-        if self.frame is None or self.hands is None:
+    def get_annotated_frame(self) -> np.ndarray | None:
+        """
+        Uses internal mediapipe functions to return a skeletonized wireframe hand on top of the currently captured
+        image. If there is no frame available, returns `None`.
+        """
+        if self.frame is None or self.detection_result is None:
             return None
         
-        hand_landmarks_list = self.hands.hand_landmarks
+        hand_landmarks_list = self.detection_result.hand_landmarks
         annotated_image = np.copy(self.frame)
 
-        # Loop through the detected hands to visualize.
+        # Loop through the detected detection_result to visualize.
         for idx in range(len(hand_landmarks_list)):
             hand_landmarks = hand_landmarks_list[idx]
 
@@ -67,16 +86,16 @@ class TrackingContext:
 
         return annotated_image
     
-    def hand_seen_within(self, period_ms: int):
+    def hand_seen_within(self, period_ms: int) -> bool:
         """
-        Whether or not a hand was seen within `period_ms` of calling this function. When hands move
+        Whether or not a hand was seen within `period_ms` of calling this function. When detection_result move
         quickly, there are occasional tracking hiccups. This method can be used to debounce a noisy
         hand presence signal.
         """
-        if self.hands_last_seen_ms is None:
+        if self.detection_result_last_seen_ms is None:
             return False
         
-        return (time.get_ticks() - self.hands_last_seen_ms) < period_ms
+        return (time.get_ticks() - self.detection_result_last_seen_ms) < period_ms
     
     @staticmethod
     def create_hand_detector(root_dir: str, callback: Callable[[HandLandmarkerResult, mp.Image, int], None]) -> HandLandmarker:

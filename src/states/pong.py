@@ -74,12 +74,12 @@ class Pong(State):
         self.background_phase += (self.ball.speed / self.BALL_MAX_SPEED) * (delta / 1000)
         self.background_phase %= 2 * np.pi
 
-        if self.tracking.hands and len(self.tracking.hands.handedness) > 0:
+        if self.tracking.detection_result and len(self.tracking.detection_result.handedness) > 0:
             # Compute the y position of the center of the palm - roughly approximated by the
             # mean of the y position of the metacarpophalangeal joints of the pinky, index finger,
             # and the y position of the wrist:
             
-            landmarks = self.tracking.hands.hand_landmarks[0]
+            landmarks = self.tracking.detection_result.hand_landmarks[0]
             y = 0
             y += landmarks[HandLandmark.WRIST].y
             y += landmarks[HandLandmark.PINKY_MCP].y
