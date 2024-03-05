@@ -31,8 +31,5 @@ def get_working_ports():
         
         camera.release()
         dev_port += 1
-
-    # Shim for testing that the camera refresh logic is working
-    # return [0, 1, random.randint(2, 4)] if random.random() < 0.8 else []
     
     return working_ports
