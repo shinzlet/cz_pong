@@ -1,16 +1,16 @@
 import threading
 from queue import Queue
+import pygame
+from pygame.surface import Surface
+from pygame.event import Event
+import pygame_gui
+from cv2 import VideoCapture
+import numpy as np
+import hsluv
 from .state import State
 from ..camera import get_working_ports
 from ..tracking_context import TrackingContext
 from ..events import START_PONG
-import pygame
-from pygame.surface import Surface
-from pygame.event import Event
-from cv2 import VideoCapture
-import pygame_gui
-import numpy as np
-import hsluv
 
 class Setup(State):
     CAMERA_LIST_REFRESH_PERIOD_MS = 10000

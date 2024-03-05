@@ -1,9 +1,9 @@
-import pygame
-from .states import state as abstract_state, setup, pong
-from .tracking_context import TrackingContext
-from .events import *
-import mediapipe as mp
 from os import path
+import pygame
+import mediapipe as mp
+from .states import state as abstract_state, setup, pong
+from .events import *
+from .tracking_context import TrackingContext
 
 class Game:
     tracking: TrackingContext

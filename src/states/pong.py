@@ -1,10 +1,10 @@
+import hsluv
+import pygame
+from pygame import Surface, Event
+from typing import Tuple
 from .state import State
 from ..events import FIRST_HIT, GAME_OVER
 from ..tracking_context import TrackingContext
-from pygame import Surface, Event
-import hsluv
-import pygame
-from typing import Tuple
 
 from os import path
 import numpy as np
