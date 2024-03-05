@@ -101,8 +101,8 @@ class Setup(State):
     def draw_camera_preview(self, screen, min_x: int) -> None:
         frame = self.tracking.get_annotated_frame()
         if frame is not None:
-            frame_surface = pygame.image.frombuffer(frame.tobytes(), frame.shape[1::-1], "BGR")
-            frame_width, frame_height = frame.shape[1], frame.shape[0]
+            frame = pygame.image.frombuffer(frame.tobytes(), frame.shape[1::-1], "BGR")
+            frame_width, frame_height = frame.get_size()
             aspect_ratio = frame_width / frame_height
 
             # Calculate available space considering minimum x and margin
@@ -118,7 +118,12 @@ class Setup(State):
                 new_height = available_height
 
             # Scale the frame to the new dimensions
-            frame = pygame.transform.scale(frame_surface, (int(new_width), int(new_height)))
+            frame = pygame.transform.scale(frame, (int(new_width), int(new_height)))
+
+            # The frame by default looks like how a viewer would see you - not how you would look
+            # in a mirror. We flip the image so that your right hand is on the right side of the
+            # preview.
+            frame = pygame.transform.flip(frame, True, False)
 
             # Calculate y position to vertically center the image
             y_position = (screen.get_height() - new_height) // 2
