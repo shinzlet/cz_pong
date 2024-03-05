@@ -2,8 +2,9 @@ import hsluv
 import numpy as np
 import pygame
 from os import path
-from pygame import Surface, Event
+from pygame import Surface
 from pygame.freetype import Font
+from pygame.event import Event
 from mediapipe.python.solutions.hands import HandLandmark
 from .state import State
 from ..events import FIRST_HIT, GAME_OVER
@@ -93,7 +94,7 @@ class Pong(State):
         if hit_paddle:
             # The first hit triggers the music to start playing for dramatic effect. :)
             if self.score == 0:
-                pygame.event.post(pygame.event.Event(FIRST_HIT))
+                pygame.event.post(Event(FIRST_HIT))
             
             self.score += 1
             speed_range = self.BALL_MAX_SPEED - self.BALL_MIN_SPEED
@@ -120,7 +121,7 @@ class Pong(State):
         # the transition feel less shocking to the user - if we did this the instant the ball passed the paddle,
         # the user might not even see it go off screen!
         if self.ball.x > pygame.display.get_surface().get_width() * 1.1:
-            pygame.event.post(pygame.event.Event(GAME_OVER))
+            pygame.event.post(Event(GAME_OVER))
 
     def handle_event(self, event: Event):
         pass
